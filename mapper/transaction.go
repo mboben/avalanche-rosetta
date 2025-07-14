@@ -24,6 +24,14 @@ const (
 var (
 	x2crate     = big.NewInt(1000000000)
 	zeroAddress = common.Address{}
+
+	burnAddress              = common.HexToAddress("0x000000000000000000000000000000000000dEaD")
+	ftsoContractAddress      = common.HexToAddress("0x1000000000000000000000000000000000000003")
+	inflationContractAddress = "0x1000000000000000000000000000000000000002"
+	ftsoGasRefundLimit       = uint64(3000000)
+	nominalGasUsed           = uint64(21000)
+	nominalGasPrice          = uint64(25_000_000_000)
+	ftsoTxFee                = new(big.Int).Mul(new(big.Int).SetUint64(nominalGasUsed), new(big.Int).SetUint64(nominalGasPrice))
 )
 
 func Transaction(
@@ -40,10 +48,14 @@ func Transaction(
 ) (*types.Transaction, error) {
 	ops := []*types.Operation{}
 	sender := msg.From()
-	feeReceiver := &header.Coinbase
+	feeReceiver := &burnAddress
 
 	txFee := new(big.Int).SetUint64(receipt.GasUsed)
 	txFee = txFee.Mul(txFee, msg.GasPrice())
+
+	if msg.To() != nil && *msg.To() == ftsoContractAddress && receipt.Status == ethtypes.ReceiptStatusSuccessful && tx.Gas() <= ftsoGasRefundLimit {
+		txFee = ftsoTxFee
+	}
 
 	feeOps := []*types.Operation{
 		{
@@ -53,7 +65,7 @@ func Transaction(
 			Type:    OpFee,
 			Status:  types.String(StatusSuccess),
 			Account: Account(&sender),
-			Amount:  AvaxAmount(new(big.Int).Neg(txFee)),
+			Amount:  FlareAmount(new(big.Int).Neg(txFee)),
 		},
 		{
 			OperationIdentifier: &types.OperationIdentifier{
@@ -67,7 +79,7 @@ func Transaction(
 			Type:    OpFee,
 			Status:  types.String(StatusSuccess),
 			Account: Account(feeReceiver),
-			Amount:  AvaxAmount(txFee),
+			Amount:  FlareAmount(txFee),
 		},
 	}
 
@@ -132,7 +144,7 @@ func Transaction(
 
 func crossChainTransaction(
 	rawIdx int,
-	avaxAssetID string,
+	flrAssetID string,
 	tx *evm.Tx,
 ) ([]*types.Operation, error) {
 	var (
@@ -161,7 +173,7 @@ func crossChainTransaction(
 		}
 
 		for _, out := range t.Outs {
-			if out.AssetID.String() != avaxAssetID {
+			if out.AssetID.String() != flrAssetID {
 				continue
 			}
 
@@ -176,7 +188,7 @@ func crossChainTransaction(
 				},
 				Amount: &types.Amount{
 					Value:    new(big.Int).Mul(new(big.Int).SetUint64(out.Amount), x2crate).String(),
-					Currency: AvaxCurrency,
+					Currency: FlareCurrency,
 				},
 				Metadata: map[string]interface{}{
 					"tx":            t.ID().String(),
@@ -193,7 +205,7 @@ func crossChainTransaction(
 		}
 	case *evm.UnsignedExportTx:
 		for _, in := range t.Ins {
-			if in.AssetID.String() != avaxAssetID {
+			if in.AssetID.String() != flrAssetID {
 				continue
 			}
 
@@ -208,7 +220,7 @@ func crossChainTransaction(
 				},
 				Amount: &types.Amount{
 					Value:    new(big.Int).Mul(new(big.Int).SetUint64(in.Amount), new(big.Int).Neg(x2crate)).String(),
-					Currency: AvaxCurrency,
+					Currency: FlareCurrency,
 				},
 				Metadata: map[string]interface{}{
 					"tx":                t.ID().String(),
@@ -229,7 +241,7 @@ func crossChainTransaction(
 }
 
 func CrossChainTransactions(
-	avaxAssetID string,
+	flrAssetID string,
 	block *ethtypes.Block,
 	ap5Activation uint64,
 ) ([]*types.Transaction, error) {
@@ -247,7 +259,7 @@ func CrossChainTransactions(
 
 	ops := []*types.Operation{}
 	for _, tx := range atomicTxs {
-		txOps, err := crossChainTransaction(len(ops), avaxAssetID, tx)
+		txOps, err := crossChainTransaction(len(ops), flrAssetID, tx)
 		if err != nil {
 			return nil, err
 		}
@@ -319,9 +331,14 @@ func traceOps(trace []*clientTypes.FlatCall, startIndex int) []*types.Operation 
 
 		// Checksum addresses
 		from := call.From.String()
+		fromInflation := from == inflationContractAddress
 		to := call.To.String()
 
 		if shouldAdd {
+			callValue := new(big.Int).Neg(call.Value)
+			if fromInflation {
+				callValue = big.NewInt(0)
+			}
 			fromOp := &types.Operation{
 				OperationIdentifier: &types.OperationIdentifier{
 					Index: int64(len(ops) + startIndex),
@@ -332,12 +349,12 @@ func traceOps(trace []*clientTypes.FlatCall, startIndex int) []*types.Operation 
 					Address: from,
 				},
 				Amount: &types.Amount{
-					Value:    new(big.Int).Neg(call.Value).String(),
-					Currency: AvaxCurrency,
+					Value:    callValue.String(),
+					Currency: FlareCurrency,
 				},
 				Metadata: metadata,
 			}
-			if zeroValue {
+			if zeroValue || fromInflation {
 				fromOp.Amount = nil
 			} else {
 				_, destroyed := destroyedAccounts[from]
@@ -394,7 +411,7 @@ func traceOps(trace []*clientTypes.FlatCall, startIndex int) []*types.Operation 
 				},
 				Amount: &types.Amount{
 					Value:    call.Value.String(),
-					Currency: AvaxCurrency,
+					Currency: FlareCurrency,
 				},
 				Metadata: metadata,
 			}
@@ -433,7 +450,7 @@ func traceOps(trace []*clientTypes.FlatCall, startIndex int) []*types.Operation 
 			},
 			Amount: &types.Amount{
 				Value:    new(big.Int).Neg(val).String(),
-				Currency: AvaxCurrency,
+				Currency: FlareCurrency,
 			},
 		})
 	}

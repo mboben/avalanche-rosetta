@@ -44,7 +44,7 @@ type client struct {
 	*ContractClient
 }
 
-// NewClient returns a new client for Avalanche APIs
+// NewClient returns a new client for Flare APIs
 func NewClient(ctx context.Context, endpoint string) (Client, error) {
 	endpoint = strings.TrimSuffix(endpoint, "/")
 

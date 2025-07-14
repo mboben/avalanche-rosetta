@@ -87,12 +87,12 @@ func main() {
 	var assetID string
 	var AP5Activation uint64
 	switch cfg.ChainID {
-	case mapper.MainnetChainID:
-		assetID = mapper.MainnetAssetID
-		AP5Activation = mapper.MainnetAP5Activation.Uint64()
-	case mapper.FujiChainID:
-		assetID = mapper.FujiAssetID
-		AP5Activation = mapper.FujiAP5Activation.Uint64()
+	case mapper.FlareChainID:
+		assetID = mapper.FlareAssetID
+		AP5Activation = uint64(0)
+	case mapper.CostwoChainID:
+		assetID = mapper.CostwoAssetID
+		AP5Activation = uint64(0)
 	default:
 		log.Fatal("invalid ChainID:", cfg.ChainID)
 	}
@@ -132,7 +132,7 @@ func main() {
 		ChainID:            big.NewInt(cfg.ChainID),
 		NetworkID:          network,
 		GenesisBlockHash:   cfg.GenesisBlockHash,
-		AvaxAssetID:        assetID,
+		FlareAssetID:       assetID,
 		AP5Activation:      AP5Activation,
 		IndexUnknownTokens: cfg.IndexUnknownTokens,
 		IngestionMode:      cfg.IngestionMode,
@@ -148,7 +148,7 @@ func main() {
 	router := server.CorsMiddleware(handler)
 
 	log.Printf(
-		`using avax (chain=%q chainid="%d" network=%q) rpc endpoint: %v`,
+		`using flr (chain=%q chainid="%d" network=%q) rpc endpoint: %v`,
 		service.BlockchainName,
 		cfg.ChainID,
 		cfg.NetworkName,

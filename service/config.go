@@ -13,7 +13,7 @@ type Config struct {
 	ChainID            *big.Int
 	NetworkID          *types.NetworkIdentifier
 	GenesisBlockHash   string
-	AvaxAssetID        string
+	FlareAssetID       string
 	IngestionMode      string
 	TokenWhiteList     []string
 	IndexUnknownTokens bool
