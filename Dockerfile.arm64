@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Build go-flare
 # ------------------------------------------------------------------------------
-FROM golang:1.22 AS flare
+FROM arm64v8/golang:1.22 AS flare
 
 WORKDIR /app
 
@@ -18,16 +18,12 @@ RUN cd avalanchego && \
 # ------------------------------------------------------------------------------
 # Build flare-rosetta
 # ------------------------------------------------------------------------------
-FROM golang:1.22 AS rosetta
+FROM arm64v8/golang:1.22 AS rosetta
 
 ARG ROSETTA_SRC=https://github.com/flare-foundation/flare-rosetta/archive/refs/heads/main.zip
 ARG ROSETTA_SRC_ZIP_SUBFOLDER=flare-rosetta-main
 
 WORKDIR /tmp
-
-ENV CGO_ENABLED=1 \
-    GOARCH=amd64 \
-    GOOS=linux
 
 RUN apt update -y && apt install unzip -y
 ADD ${ROSETTA_SRC} /tmp/rosetta-source
@@ -48,9 +44,9 @@ RUN \
   make build
 
 # ------------------------------------------------------------------------------
-# Target container for running the rosetta server - Ubuntu 22.04
+# Target container for running the rosetta server
 # ------------------------------------------------------------------------------
-FROM ubuntu@sha256:ed1544e454989078f5dec1bfdabd8c5cc9c48e0705d07b678ab6ae3fb61952d2
+FROM arm64v8/ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -71,8 +67,9 @@ ENV HTTP_HOST=0.0.0.0 \
     START_ROSETTA_SERVER_AFTER_BOOTSTRAP=false \
     AUTOCONFIGURE_BOOTSTRAP_ENDPOINT="" \
     AUTOCONFIGURE_BOOTSTRAP_ENDPOINT_RETRY=0 \
-    YES_I_REALLY_KNOW_WHAT_I_AM_DOING="false" \
-    HTTP_ALLOWED_HOSTS="*"
+    STAKING_ENABLED="true" \
+    YES_I_REALLY_KNOW_WHAT_I_AM_DOING="false"
+
 
 
 # Intentionally empty, so env vars are evalueted at runtime (script entrypoint_flare.sh) instead of build time

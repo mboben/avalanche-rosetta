@@ -1,7 +1,7 @@
 {
   "network": {
-    "blockchain": "Avalanche",
-    "network": "Mainnet"
+    "blockchain": "flare",
+    "network": "testnet"
   },
   "online_url": "http://localhost:8080",
   "http_timeout": 500,
@@ -12,22 +12,33 @@
   "tip_delay": 3600,
   "log_configuration": false,
   "compression_disabled": false,
-  "memory_limit_disabled": false,
   "data_directory": "rosetta-data",
   "construction": {
     "offline_url": "http://localhost:8080",
     "stale_depth": 5,
     "broadcast_limit": 5,
-    "constructor_dsl_file": "./avalanche.ros",
+    "constructor_dsl_file": "./costwo.ros",
     "end_conditions": {
       "create_account": 10,
       "transfer": 10
     },
-    "prefunded_accounts": []
+    "prefunded_accounts": [
+      {
+        "privkey": "",
+        "account_identifier": {
+          "address": "0xcb00566863A90DBa5fE56e9a7e4Cf310c24e6506"
+        },
+        "curve_type": "secp256k1",
+        "currency": {
+          "symbol": "FLR",
+          "decimals": 18
+        }
+      }
+    ]
   },
   "data": {
-    "active_reconciliation_concurrency": 24,
-    "inactive_reconciliation_concurrency": 4,
+    "active_reconciliation_concurrency": 1,
+    "inactive_reconciliation_concurrency": 1,
     "inactive_reconciliation_frequency": 250,
     "initial_balance_fetch_disabled": false,
     "log_blocks": false,
@@ -35,18 +46,17 @@
     "log_balance_changes": false,
     "log_reconciliations": false,
     "ignore_reconciliation_error": false,
-    "exempt_accounts": "",
+    "exempt_accounts": "./exempt_accounts.json",
     "bootstrap_balances": "",
     "interesting_accounts": "",
     "reconciliation_disabled": false,
     "balance_tracking_disabled": false,
-    "historical_balance_enabled": true,
     "coin_tracking_disabled": false,
     "results_output_file": "",
     "end_conditions": {
       "tip": true,
       "reconciliation_coverage": {
-        "coverage": 0.95,
+        "coverage": 0.70,
         "tip": true
       }
     }
