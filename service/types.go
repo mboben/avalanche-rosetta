@@ -82,8 +82,8 @@ func (o *options) MarshalJSON() ([]byte, error) {
 	if o.Nonce != nil {
 		ow.Nonce = hexutil.EncodeBig(o.Nonce)
 	}
-	if len(o.Data) > 0 {
-		ow.Data = hexutil.Encode(o.Data)
+	if len(o.ContractData) > 0 {
+		ow.ContractData = o.ContractData
 	}
 
 	return json.Marshal(ow)
@@ -134,12 +134,8 @@ func (o *options) UnmarshalJSON(data []byte) error {
 		o.Nonce = nonce
 	}
 
-	if len(ow.Data) > 0 {
-		data, err := hexutil.Decode(ow.Data)
-		if err != nil {
-			return err
-		}
-		o.Data = data
+	if len(ow.ContractData) > 0 {
+		o.ContractData = ow.ContractData
 	}
 
 	return nil
@@ -180,8 +176,8 @@ func (m *metadata) MarshalJSON() ([]byte, error) {
 		MethodArgs:      m.MethodArgs,
 	}
 
-	if len(m.Data) > 0 {
-		mw.Data = hexutil.Encode(m.Data)
+	if len(m.ContractData) > 0 {
+		mw.ContractData = m.ContractData
 	}
 	return json.Marshal(mw)
 }
@@ -215,12 +211,8 @@ func (m *metadata) UnmarshalJSON(data []byte) error {
 	}
 	m.Nonce = nonce
 
-	if len(mw.Data) > 0 {
-		mwData, err := hexutil.Decode(mw.Data)
-		if err != nil {
-			return err
-		}
-		m.Data = mwData
+	if len(mw.ContractData) > 0 {
+		m.ContractData = mw.ContractData
 	}
 
 	return nil

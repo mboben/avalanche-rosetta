@@ -283,7 +283,7 @@ func TestCrossChainImportedInputs(t *testing.T) {
 			},
 			Amount: &types.Amount{
 				Value:    "1998719250000000000",
-				Currency: AvaxCurrency,
+				Currency: FlareCurrency,
 			},
 			Metadata: map[string]interface{}{
 				"asset_id":      "U8iRqJoiJm8xZHAacmvYyZVwqQx6uDNtQeP3CQ6fcgQk3JqnK",
@@ -338,7 +338,7 @@ func TestCrossChainExportedOuts(t *testing.T) {
 			},
 			Amount: &types.Amount{
 				Value:    "-1280750000000000",
-				Currency: AvaxCurrency,
+				Currency: FlareCurrency,
 			},
 			Metadata: map[string]interface{}{
 				"tx":                "7QUPqUAMdny53bVptZ2DgxLLN4qZ5X7MnBPseUKYnoh5C5v47",

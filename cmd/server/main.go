@@ -100,13 +100,13 @@ func main() {
 	switch cfg.ChainID {
 	case mapper.FlareChainID:
 		assetID = mapper.FlareAssetID
-		AP5Activation = uint64(0)
+		ap5Activation = uint64(0)
 	case mapper.CostwoChainID:
 		assetID = mapper.CostwoAssetID
-		AP5Activation = uint64(0)
+		ap5Activation = uint64(0)
 	case mapper.LocalFlareChainID:
 		assetID = mapper.LocalFlareAssetID
-		AP5Activation = uint64(0)
+		ap5Activation = uint64(0)
 	default:
 		log.Fatal("invalid ChainID:", cfg.ChainID)
 	}
@@ -157,7 +157,7 @@ func main() {
 		ChainID:            big.NewInt(cfg.ChainID),
 		NetworkID:          networkC,
 		GenesisBlockHash:   cfg.GenesisBlockHash,
-		AvaxAssetID:        assetID,
+		FlareAssetID:       assetID,
 		AP5Activation:      ap5Activation,
 		IndexUnknownTokens: cfg.IndexUnknownTokens,
 		IngestionMode:      cfg.IngestionMode,
@@ -183,19 +183,6 @@ func main() {
 		log.Fatal("server asserter init error:", err)
 	}
 
-	serviceConfig := &service.Config{
-		Mode:               cfg.Mode,
-		ChainID:            big.NewInt(cfg.ChainID),
-		NetworkID:          network,
-		GenesisBlockHash:   cfg.GenesisBlockHash,
-		FlareAssetID:       assetID,
-		AP5Activation:      AP5Activation,
-		IndexUnknownTokens: cfg.IndexUnknownTokens,
-		IngestionMode:      cfg.IngestionMode,
-		TokenWhiteList:     cfg.TokenWhiteList,
-	}
-
-	handler := configureRouter(serviceConfig, asserter, apiClient)
 	handler := configureRouter(serviceConfig, asserter, cChainClient, pChainBackend, cChainAtomicTxBackend)
 	if cfg.LogRequests {
 		handler = inspectMiddleware(handler)

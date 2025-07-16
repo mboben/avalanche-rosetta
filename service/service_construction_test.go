@@ -11,13 +11,12 @@ import (
 	"github.com/coinbase/rosetta-sdk-go/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/ava-labs/avalanche-rosetta/client"
 	"github.com/ava-labs/avalanche-rosetta/mapper"
-
-	rosConst "github.com/ava-labs/avalanche-rosetta/constants"
 )
 
 const (
@@ -116,7 +115,7 @@ func TestConstructionMetadata(t *testing.T) {
 			SuggestedFee: []*types.Amount{
 				{
 					Value:    "21001000000000",
-					Currency: mapper.AvaxCurrency,
+					Currency: mapper.FlareCurrency,
 				},
 			},
 		}, resp)
@@ -947,7 +946,7 @@ func TestPreprocessMetadata(t *testing.T) {
 			SuggestedFee: []*types.Amount{
 				{
 					Value:    "21001000000000",
-					Currency: mapper.AvaxCurrency,
+					Currency: mapper.FlareCurrency,
 				},
 			},
 		}, metadataResponse)
@@ -1039,7 +1038,7 @@ func TestPreprocessMetadata(t *testing.T) {
 			SuggestedFee: []*types.Amount{
 				{
 					Value:    "21001000000000",
-					Currency: mapper.AvaxCurrency,
+					Currency: mapper.FlareCurrency,
 				},
 			},
 		}, metadataResponse)
@@ -1140,20 +1139,16 @@ func TestPreprocessMetadata(t *testing.T) {
 
 	t.Run("generic contract call flow", func(t *testing.T) {
 		contractCallIntent := `[{"operation_identifier":{"index":0},"type":"CALL","account":{"address":"0xe3a5B4d7f79d64088C8d4ef153A7DDe2B2d47309"},"amount":{"value":"0","currency":{"symbol":"FLR","decimals":18}}},{"operation_identifier":{"index":1},"type":"CALL","account":{"address":"0x57B414a0332B5CaB885a451c2a28a07d1e9b8a8d"},"amount":{"value":"0","currency":{"symbol":"FLR","decimals":18}}}]`
+		skippedBackend := NewMockConstructionBackend(ctrl)
+		skippedBackend.EXPECT().ShouldHandleRequest(gomock.Any()).Return(false).AnyTimes()
+
 		service := ConstructionService{
-			config: &Config{Mode: ModeOnline},
-			client: client,
+			config:                &Config{Mode: ModeOnline},
+			client:                client,
+			pChainBackend:         skippedBackend,
+			cChainAtomicTxBackend: skippedBackend,
 		}
 
-		currency := &types.Currency{Symbol: defaultSymbol, Decimals: defaultDecimals}
-		client.On(
-			"ContractInfo",
-			common.HexToAddress(defaultContractAddress),
-			true,
-		).Return(
-			currency,
-			nil,
-		).Once()
 		var ops []*types.Operation
 		assert.NoError(t, json.Unmarshal([]byte(contractCallIntent), &ops))
 		requestMetadata := map[string]interface{}{
@@ -1177,45 +1172,43 @@ func TestPreprocessMetadata(t *testing.T) {
 			Options: forceMarshalMap(t, &opt),
 		}, preprocessResponse)
 
-		data, _ := hexutil.Decode("0xb0d78b753100000000000000000000000000000000000000000000000000000000000000000000000000000000000000323e3ab04a3795ad79cc92378fcdb0a0aec51ba500000000000000000000000014e37c2e9cd255404bd35b4542fd9ccaa070aed6000000000000000000000000323e3ab04a3795ad79cc92378fcdb0a0aec51ba500000000000000000000000014e37c2e9cd255404bd35b4542fd9ccaa070aed6")
+		data := "0xb0d78b753100000000000000000000000000000000000000000000000000000000000000000000000000000000000000323e3ab04a3795ad79cc92378fcdb0a0aec51ba500000000000000000000000014e37c2e9cd255404bd35b4542fd9ccaa070aed6000000000000000000000000323e3ab04a3795ad79cc92378fcdb0a0aec51ba500000000000000000000000014e37c2e9cd255404bd35b4542fd9ccaa070aed6"
 		metadata := &metadata{
 			GasPrice:        big.NewInt(1000000000),
 			GasLimit:        21_001,
 			Nonce:           0,
-			Data:            data,
+			ContractData:    data,
 			MethodSignature: "deploy(bytes32,address,address,address,address)",
 			MethodArgs:      []string{"0x3100000000000000000000000000000000000000000000000000000000000000", "0x323e3ab04a3795ad79cc92378fcdb0a0aec51ba5", "0x14e37c2e9cd255404bd35b4542fd9ccaa070aed6", "0x323e3ab04a3795ad79cc92378fcdb0a0aec51ba5", "0x14e37c2e9cd255404bd35b4542fd9ccaa070aed6"},
 		}
 
-		client.On(
-			"SuggestGasPrice",
+		client.EXPECT().SuggestGasPrice(
 			ctx,
 		).Return(
 			big.NewInt(1000000000),
 			nil,
-		).Once()
+		)
 		to := common.HexToAddress("0x57B414a0332B5CaB885a451c2a28a07d1e9b8a8d")
-		client.On(
-			"EstimateGas",
+		dataBytes, _ := hexutil.Decode(data)
+		client.EXPECT().EstimateGas(
 			ctx,
 			interfaces.CallMsg{
 				From: common.HexToAddress("0xe3a5B4d7f79d64088C8d4ef153A7DDe2B2d47309"),
 				To:   &to,
-				Data: data,
+				Data: dataBytes,
 			},
 		).Return(
 			uint64(21001),
 			nil,
-		).Once()
-		client.On(
-			"NonceAt",
+		)
+		client.EXPECT().NonceAt(
 			ctx,
 			common.HexToAddress("0xe3a5B4d7f79d64088C8d4ef153A7DDe2B2d47309"),
 			(*big.Int)(nil),
 		).Return(
 			uint64(0),
 			nil,
-		).Once()
+		)
 		metadataResponse, err := service.ConstructionMetadata(ctx, &types.ConstructionMetadataRequest{
 			NetworkIdentifier: networkIdentifier,
 			Options:           forceMarshalMap(t, &opt),
@@ -1234,20 +1227,16 @@ func TestPreprocessMetadata(t *testing.T) {
 
 	t.Run("generic contract call flow with encoded args", func(t *testing.T) {
 		contractCallIntent := `[{"operation_identifier":{"index":0},"type":"CALL","account":{"address":"0xe3a5B4d7f79d64088C8d4ef153A7DDe2B2d47309"},"amount":{"value":"0","currency":{"symbol":"FLR","decimals":18}}},{"operation_identifier":{"index":1},"type":"CALL","account":{"address":"0x57B414a0332B5CaB885a451c2a28a07d1e9b8a8d"},"amount":{"value":"0","currency":{"symbol":"FLR","decimals":18}}}]`
+		skippedBackend := NewMockConstructionBackend(ctrl)
+		skippedBackend.EXPECT().ShouldHandleRequest(gomock.Any()).Return(false).AnyTimes()
+
 		service := ConstructionService{
-			config: &Config{Mode: ModeOnline},
-			client: client,
+			config:                &Config{Mode: ModeOnline},
+			client:                client,
+			pChainBackend:         skippedBackend,
+			cChainAtomicTxBackend: skippedBackend,
 		}
 
-		currency := &types.Currency{Symbol: defaultSymbol, Decimals: defaultDecimals}
-		client.On(
-			"ContractInfo",
-			common.HexToAddress(defaultContractAddress),
-			true,
-		).Return(
-			currency,
-			nil,
-		).Once()
 		var ops []*types.Operation
 		assert.NoError(t, json.Unmarshal([]byte(contractCallIntent), &ops))
 		requestMetadata := map[string]interface{}{
@@ -1271,45 +1260,43 @@ func TestPreprocessMetadata(t *testing.T) {
 			Options: forceMarshalMap(t, &opt),
 		}, preprocessResponse)
 
-		data, _ := hexutil.Decode("0x84dc7baa000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001")
+		data := "0x84dc7baa000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001"
 		metadata := &metadata{
 			GasPrice:        big.NewInt(1000000000),
 			GasLimit:        21_001,
 			Nonce:           0,
-			Data:            data,
+			ContractData:    data,
 			MethodSignature: "cloneRandomDepositWallets(bytes32[])",
 			MethodArgs:      "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001",
 		}
 
-		client.On(
-			"SuggestGasPrice",
+		client.EXPECT().SuggestGasPrice(
 			ctx,
 		).Return(
 			big.NewInt(1000000000),
 			nil,
-		).Once()
+		)
 		to := common.HexToAddress("0x57B414a0332B5CaB885a451c2a28a07d1e9b8a8d")
-		client.On(
-			"EstimateGas",
+		dataBytes, _ := hexutil.Decode(data)
+		client.EXPECT().EstimateGas(
 			ctx,
 			interfaces.CallMsg{
 				From: common.HexToAddress("0xe3a5B4d7f79d64088C8d4ef153A7DDe2B2d47309"),
 				To:   &to,
-				Data: data,
+				Data: dataBytes,
 			},
 		).Return(
 			uint64(21001),
 			nil,
-		).Once()
-		client.On(
-			"NonceAt",
+		)
+		client.EXPECT().NonceAt(
 			ctx,
 			common.HexToAddress("0xe3a5B4d7f79d64088C8d4ef153A7DDe2B2d47309"),
 			(*big.Int)(nil),
 		).Return(
 			uint64(0),
 			nil,
-		).Once()
+		)
 		metadataResponse, err := service.ConstructionMetadata(ctx, &types.ConstructionMetadataRequest{
 			NetworkIdentifier: networkIdentifier,
 			Options:           forceMarshalMap(t, &opt),

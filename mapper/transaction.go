@@ -55,13 +55,13 @@ func Transaction(
 	includeUnknownTokens bool,
 ) (*types.Transaction, error) {
 	ops := []*types.Operation{}
-	sender := msg.From()
+	sender := msg.From
 	feeReceiver := &burnAddress
 
 	txFee := new(big.Int).SetUint64(receipt.GasUsed)
 	txFee = txFee.Mul(txFee, msg.GasPrice)
 
-	if msg.To() != nil && *msg.To() == ftsoContractAddress && receipt.Status == ethtypes.ReceiptStatusSuccessful && tx.Gas() <= ftsoGasRefundLimit {
+	if msg.To != nil && *msg.To == ftsoContractAddress && receipt.Status == ethtypes.ReceiptStatusSuccessful && tx.Gas() <= ftsoGasRefundLimit {
 		txFee = ftsoTxFee
 	}
 
