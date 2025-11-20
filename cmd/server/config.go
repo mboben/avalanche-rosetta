@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 
-	"github.com/ava-labs/avalanchego/utils/constants"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ava-labs/avalanche-rosetta/client"
@@ -87,8 +87,8 @@ func (c *config) validate() error {
 		return errors.New("network name not provided")
 	}
 
-	if _, err := constants.NetworkID(c.NetworkName); err != nil {
-		return errors.New("network name not mapping to any known network ID")
+	if !mapper.IsSupportedHRP(c.NetworkName) {
+		return fmt.Errorf("network name %q not mapping to any known network ID", c.NetworkName)
 	}
 
 	if c.GenesisBlockHash == "" {
@@ -142,6 +142,5 @@ func (c *config) validateWhitelistOnlyValidErc20s(cli client.Client) error {
 
 func (c *config) avalancheNetworkID() uint32 {
 	// error checked in config.validate
-	res, _ := constants.NetworkID(c.NetworkName)
-	return res
+	return mapper.HRPToChainID[c.NetworkName]
 }
