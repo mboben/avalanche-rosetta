@@ -3,9 +3,6 @@ package service
 import (
 	"math/big"
 
-	"github.com/ava-labs/avalanchego/upgrade"
-	"github.com/ava-labs/avalanchego/utils/constants"
-	"github.com/ava-labs/coreth/params"
 	"github.com/coinbase/rosetta-sdk-go/types"
 
 	ethtypes "github.com/ava-labs/coreth/core/types"
@@ -61,16 +58,5 @@ func (c Config) IsTokenListEmpty() bool {
 
 // Signer returns an eth signer object for a given chain
 func (c Config) Signer() ethtypes.Signer {
-	if c.ChainID != nil {
-		if c.ChainID.Cmp(params.AvalancheMainnetChainID) == 0 {
-			return ethtypes.LatestSigner(params.GetChainConfig(upgrade.GetConfig(constants.MainnetID), params.AvalancheMainnetChainID))
-		}
-		if c.ChainID.Cmp(params.AvalancheFujiChainID) == 0 {
-			return ethtypes.LatestSigner(params.GetChainConfig(upgrade.GetConfig(constants.FujiID), params.AvalancheFujiChainID))
-		}
-		if c.ChainID.Cmp(params.AvalancheLocalChainID) == 0 {
-			return ethtypes.LatestSigner(params.GetChainConfig(upgrade.GetConfig(constants.LocalID), params.AvalancheLocalChainID))
-		}
-	}
-	return ethtypes.LatestSignerForChainID(c.ChainID)
+	return ethtypes.NewCancunSigner(c.ChainID)
 }
