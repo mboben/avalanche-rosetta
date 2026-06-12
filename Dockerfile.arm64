@@ -18,7 +18,7 @@ RUN cd avalanchego && \
 # ------------------------------------------------------------------------------
 # Build flare-rosetta
 # ------------------------------------------------------------------------------
-FROM arm64v8/golang:1.22 AS rosetta
+FROM arm64v8/golang:1.24 AS rosetta
 
 ARG ROSETTA_SRC=https://github.com/flare-foundation/flare-rosetta/archive/refs/heads/main.zip
 ARG ROSETTA_SRC_ZIP_SUBFOLDER=flare-rosetta-main
