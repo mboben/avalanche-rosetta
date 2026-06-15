@@ -1,11 +1,11 @@
 # ------------------------------------------------------------------------------
 # Build go-flare
 # ------------------------------------------------------------------------------
-FROM golang:1.22 AS flare
+FROM golang:1.24 AS flare
 
 WORKDIR /app
 
-ARG GO_FLARE_VERSION=v1.12.0
+ARG GO_FLARE_VERSION=v1.14.0-rc0
 ARG GO_FLARE_REPO=https://github.com/flare-foundation/go-flare
 
 RUN git clone --branch "$GO_FLARE_VERSION" "${GO_FLARE_REPO}" .
